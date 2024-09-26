@@ -1,7 +1,6 @@
 package com.example.appfirebase
 
 import android.content.ContentValues
-import android.content.ContentValues.TAG
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -55,7 +54,7 @@ class MainActivity : ComponentActivity() {
 fun App(db: FirebaseFirestore) {
     var nome by remember { mutableStateOf("") }
     var numero by remember { mutableStateOf("") }
-    var listaClientes by remember { mutableStateOf(emptyList<Map<String, String>>()) }
+    val clientes = remember { mutableStateListOf<HashMap<String, String>>() }
 
     Column(
         Modifier.fillMaxWidth()
@@ -71,7 +70,7 @@ fun App(db: FirebaseFirestore) {
                 .fillMaxWidth(),
             horizontalArrangement = Arrangement.Center
         ) {
-            Text(text = "João Lucas 3 DS 2024")
+            Text(text = "App Firebase Firestore")
         }
 
         Row(
@@ -79,22 +78,6 @@ fun App(db: FirebaseFirestore) {
                 .fillMaxWidth()
                 .padding(20.dp)
         ) {}
-
-        // Adicionando campos de Nome e Telefone para os Clientes
-        Row(
-            Modifier.fillMaxWidth()
-        ) {
-            Column(
-                Modifier.fillMaxWidth(0.5f)
-            ) {
-                Text(text = "Nome:")
-            }
-            Column(
-                Modifier.fillMaxWidth(0.5f)
-            ) {
-                Text(text = "Telefone:")
-            }
-        }
 
         // Input para Nome
         Row(
@@ -120,7 +103,7 @@ fun App(db: FirebaseFirestore) {
             Column(
                 Modifier.fillMaxWidth(0.3f)
             ) {
-                Text(text = "Número:")
+                Text(text = "Telefone:")
             }
             Column {
                 TextField(
@@ -143,14 +126,32 @@ fun App(db: FirebaseFirestore) {
             horizontalArrangement = Arrangement.Center
         ) {
             Button(onClick = {
-                val Cliente = hashMapOf(
+                val cliente = hashMapOf(
                     "nome" to nome,
                     "numero" to numero
                 )
 
-                db.collection("Cliente").add(Cliente)
+                db.collection("Cliente").add(cliente)
                     .addOnSuccessListener { documentReference ->
                         Log.d(ContentValues.TAG, "DocumentSnapshot written with ID: ${documentReference.id}")
+                        Log.d(ContentValues.TAG, "Ultimo Cliente Cadastrado : $cliente")
+
+                        // Recupera e exibe clientes cadastrados
+                        db.collection("Cliente").get()
+                            .addOnSuccessListener { result ->
+                                clientes.clear()
+                                for (document in result) {
+                                    val lista = hashMapOf(
+                                        "nome" to (document.getString("nome") ?: "--"),
+                                        "numero" to (document.getString("numero") ?: "--")
+                                    )
+                                    clientes.add(lista)
+                                    Log.i(ContentValues.TAG, "Lista: $lista")
+                                }
+                            }
+                            .addOnFailureListener { e ->
+                                Log.w(ContentValues.TAG, "Error getting documents.", e)
+                            }
                     }
                     .addOnFailureListener { e ->
                         Log.w(ContentValues.TAG, "Error adding document", e)
@@ -173,66 +174,26 @@ fun App(db: FirebaseFirestore) {
             Column(
                 Modifier.fillMaxWidth()
             ) {
-                db.collection("Cliente")
-                    .get()
-                    .addOnSuccessListener { documents ->
-                        val Clientes = mutableStateListOf<HashMap<String, String>>()
-                        for (document in documents) {
-                            val lista = hashMapOf(
-                                "nome" to "${document.data.get("nome")}",
-                                "numero" to "${document.data.get("numero")}"
-                            )
-                            Clientes.add(lista)
-                            Log.d(ContentValues.TAG, "${document.id} => ${document.data}")
-                        }
-                        listaClientes = Clientes
-                    }
-                    .addOnFailureListener { exception ->
-                        Log.w(TAG, "Error getting documents:", exception)
-                    }
                 LazyColumn(modifier = Modifier.fillMaxWidth()) {
-                    items(listaClientes) { Cliente ->
+                    item {
                         Row(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.weight(0.5f)) {
-                                Text(text = Cliente["nome"] ?: "--")
+                                Text(text = "Nome:")
                             }
                             Column(modifier = Modifier.weight(0.5f)) {
-                                Text(text = Cliente["numero"] ?: "--")
+                                Text(text = "Telefone:")
                             }
                         }
                     }
-                }
-
-                // Exibindo a lista de Clientes
-                listaClientes.forEach { Cliente ->
-
-                    Row(
-                        Modifier.fillMaxWidth()
-                    ) {
-
-                        Column {
-                            Text(text = Cliente["numero"] ?: "")
+                    items(clientes) { cliente ->
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            Column(modifier = Modifier.weight(0.5f)) {
+                                Text(text = cliente["nome"] ?: "--")
+                            }
+                            Column(modifier = Modifier.weight(0.5f)) {
+                                Text(text = cliente["numero"] ?: "--")
+                            }
                         }
-                        Column {
-                            Text(text = Cliente["nome"] ?: "")
-                        }
-
-                    Row(
-                        Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            Modifier.fillMaxWidth(0.3f)
-                        ) {
-                            Text(text = "Nome:")
-                        }
-                        Column(
-                            Modifier.fillMaxWidth(0.3f)
-                        ) {
-                            Text(text = "Número:")
-                        }
-
-                    }
-
                     }
                 }
             }
